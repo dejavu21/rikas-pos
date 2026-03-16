@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          Role      @default(CASHIER)
+  avatar        String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  orders        Order[]
+  expenses      Expense[]
+  restocks      Restock[]
+  activityLogs  ActivityLog[]
+}
+
+enum Role {
+  OWNER
+  CASHIER
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  color       String    @default("#3B82F6")
+  icon        String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id            String            @id @default(cuid())
+  name          String
+  barcode       String?           @unique
+  categoryId    String?
+  category      Category?         @relation(fields: [categoryId], references: [id])
+  image         String?
+  price         Float             @default(0)
+  costPrice     Float             @default(0)
+  stock         Int               @default(0)
+  minStock      Int               @default(0)
+  unit          String            @default("pcs")
+  isFavorite    Boolean           @default(false)
+  hasVariations Boolean           @default(false)
+  variations    ProductVariation[]
+  wholesalePrices WholesalePrice[]
+  orderItems    OrderItem[]
+  restocks      Restock[]
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+}
+
+model ProductVariation {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name       String
+  sku        String?
+  price      Float    @default(0)
+  stock      Int      @default(0)
+  orderItems OrderItem[]
+  restocks   Restock[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model WholesalePrice {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  minQty     Int
+  price      Float
+  createdAt  DateTime @default(now())
+}
+
+model Customer {
+  id        String    @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  points    Int       @default(0)
+  orders    Order[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  orderNumber     String      @unique
+  customerId      String?
+  customer        Customer?   @relation(fields: [customerId], references: [id])
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  subtotal        Float
+  discount        Float       @default(0)
+  discountType    DiscountType @default(PERCENTAGE)
+  tax             Float       @default(0)
+  additionalFees  Float       @default(0)
+  total           Float
+  paymentMethod   String
+  amountPaid      Float       @default(0)
+  change          Float       @default(0)
+  status          OrderStatus @default(PENDING)
+  notes           String?
+  isPreOrder      Boolean     @default(false)
+  preOrderDate    DateTime?
+  items           OrderItem[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+enum OrderStatus {
+  PENDING
+  COMPLETED
+  VOID
+  PREORDER
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+model OrderItem {
+  id             String   @id @default(cuid())
+  orderId        String
+  order          Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId      String
+  product        Product  @relation(fields: [productId], references: [id])
+  variationId     String?
+  variation      ProductVariation? @relation(fields: [variationId], references: [id])
+  quantity       Int
+  price          Float
+  costPrice      Float    @default(0)
+  discount       Float    @default(0)
+  discountType   DiscountType @default(PERCENTAGE)
+  notes          String?
+  additionalFees Float    @default(0)
+  createdAt      DateTime @default(now())
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  category    String
+  date        DateTime @default(now())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Restock {
+  id           String            @id @default(cuid())
+  productId    String
+  product      Product           @relation(fields: [productId], references: [id])
+  variationId  String?
+  variation    ProductVariation? @relation(fields: [variationId], references: [id])
+  quantity     Int
+  costPrice    Float
+  supplier     String?
+  notes        String?
+  userId       String
+  user         User              @relation(fields: [userId], references: [id])
+  createdAt    DateTime          @default(now())
+}
+
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value Json
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  action      String
+  description String
+  details     Json?
+  createdAt   DateTime @default(now())
+}

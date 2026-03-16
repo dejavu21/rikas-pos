@@ -1,0 +1,57 @@
+import { NextRequest, NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
+import prisma from "@/lib/prisma"
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { id } = await params
+    const body = await req.json()
+    const { description, amount, category, date } = body
+
+    const expense = await prisma.expense.update({
+      where: { id },
+      data: {
+        description,
+        amount: parseFloat(amount),
+        category,
+        date: date ? new Date(date) : new Date(),
+      },
+    })
+
+    return NextResponse.json(expense)
+  } catch (error) {
+    console.error("Error updating expense:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { id } = await params
+    await prisma.expense.delete({
+      where: { id },
+    })
+
+    return NextResponse.json({ message: "Expense deleted successfully" })
+  } catch (error) {
+    console.error("Error deleting expense:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
